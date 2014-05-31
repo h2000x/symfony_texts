@@ -28,10 +28,6 @@ php app/console cache:clear
 
 
 
-
-
-
-
 ---Ein Bundle aus Symfony2 löschen---
 http://symfony.com/doc/current/cookbook/bundles/remove.html
 1. Entsprechnende Zeile aus dem app/AppKernel.php löschen
