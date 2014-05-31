@@ -1,0 +1,114 @@
+Ein Produkt soll mehrere Kommentare haben
+
+Ein Kommentar soll bestehen aus
+
+Comment: ein langer Text
+AuthorName: ein kurzer Text
+
+Erstellen des Objektes und seiner Eigenschaften:
+
+php app/console doctrine:generate:entity --entity="AcmeStoreBundle:Comment" --fields="author_name:string(255) comment:text" --with-repository
+
+Automatisch wird noch die Eigenschaft id eingefügt die der Primary Key ist.
+
+Tabelle erzeugen
+php app/console doctrine:schema:update --force
+
+Hier handelt es sich um die Umgekehrte Variante wie bei den Kategorien der 
+Produkte (jedes Produkt hat eine Categorie -> Jeder Kommentar hat ein Produkt)
+
+D.h. das Kommentar-Objekt braucht noch die die Eigenschaft product_id, die
+mit der Id des Produktes verknüpft ist.
+
+Zuerst die ArrayCollection im Produkt
+
+// Entity/Product.php
+
+use Doctrine\Common\Collections\ArrayCollection;
+[...]
+    /**
+     * @ORM\OneToMany(targetEntity="Comment", mappedBy="product")
+     */
+    protected $comments;
+
+    public function __construct()
+    {
+        $this->comments = new ArrayCollection();
+    }
+
+	
+Und nun die Eigenschaft product_id in Comment	
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Product", inversedBy="comments")
+     * @ORM\JoinColumn(name="product_id", referencedColumnName="id")
+     */
+    protected $product_id;
+	
+
+Die Klassen entsprechen erweitern	
+php app/console doctrine:generate:entities Acme	
+
+Damit entsteht in der Klasse Product die Funktionen
+-addComment
+-removeComment
+-getComments
+
+	
+Jetzt die Entsprechenden Änderungen in der Datenbank einbauen
+
+php app/console doctrine:schema:update --force	
+
+
+
+Zum testweise Probieren der Funktionen habe ich im DefaultController folgende 
+Funktion eingebaut, die zwei Testkommentare einbaut:
+
+    public function createAction($name)
+	{
+
+	    //EntityManager
+	    $em = $this->getDoctrine()->getManager();
+
+	    $product = new Product();
+	    $product->setName( $name );
+	    $product->setPrice('19.99');
+	    $product->setDescription('WComments');
+
+
+	    //Der EntityManager übernimmt die Verwaltung des Objekts
+	    $em->persist( $product );
+	    $em->flush();
+
+	    $comment1 = new Comment();
+	    $comment1->setAuthorName('Ralf');
+	    $comment1->setComment('ipLorem ipsum Voluptate quis id et aliquip consequat ad nostrud sit ad in irure sit tempor.sum');
+	    $comment1->setProductId( $product );
+
+	    //$product->addComment( $comment1 );
+
+	    $comment2 = new Comment();
+	    $comment2->setAuthorName('Peter');
+	    $comment2->setComment('Lorem ipsum Pariatur culpa non dolor quis non commodo cillum cupidatat fugiat sint mollit officia in ut Excepteur amet aliquip ad cupidatat dolor in culpa tempor reprehenderit non consequat enim proident est sunt irure eu.');
+	    $comment2->setProductId( $product );
+
+	    //$product->addComment( $comment2 );
+
+	    $em->persist( $comment1 );
+	    $em->persist( $comment2 );
+	    
+
+	    //Das Objekt wird gespeichert
+	    $em->flush();
+
+	    return new Response('Created product id '.$product->getId());
+	}
+
+Wichtig ist hierbei die Zeile:
+	    $comment1->setProductId( $product );
+
+Damit der Kommtar weiß zur welchem Produkt ergehört.	
+
+Die Zeile hat keine Relevanz
+	    $product->addComment( $comment1 );
+		

@@ -1,0 +1,41 @@
+Bundle erstellen
+php app/console generate:bundle --namespace=Acme/HandBundle --format=yml
+
+Entity erstellen
+php app/console doctrine:generate:entity --no-interaction --entity="AcmeHandBundle:Hand" --fields="name:string(255) description:text" --with-repository 
+
+
+Entity aktualisieren
+php app/console doctrine:generate:entities Acme/HandBundle oder
+php app/console doctrine:generate:entities Acme/HandBundle/Hand
+
+
+Mysql-Tabellen erzeugen
+php app/console doctrine:schema:update --force
+
+
+Cache löschen
+php app/console cache:clear
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---Ein Bundle aus Symfony2 löschen---
+http://symfony.com/doc/current/cookbook/bundles/remove.html
+1. Entsprechnende Zeile aus dem app/AppKernel.php löschen
+2. Entsprechnende Zeile aus dem app/config/routing.yml löschen
+3. Das entsprechende Verzeichnis in src löschen.
+4. Die entsprechenden Tabellen löschen
+5. Cache löschen 'php app/console cache:clear'

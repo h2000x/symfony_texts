@@ -1,0 +1,102 @@
+
+
+Neuer Feld attachment
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    $attachment;
+
+php app/console doctrine:generate:entities AranexFreitagBundle
+php app/console doctrine:schema:update --force
+
+
+
+Form erschaffen
+php app/console generate:doctrine:form AranexFreitagBundle:Flower
+
+nach Type verschieben und anpassen.
+
+Route anlegen
+
+aranex_freitag_form:
+    pattern:  /freitag/form
+    defaults: { _controller: AranexFreitagBundle:Default:form }
+
+
+Action anlegen
+
+use Aranex\FreitagBundle\Form\Type\FlowerType;
+
+
+    public function formAction()
+    {
+    	$flower = new Flower();
+    	$flower->setName('Sonnenblume');
+
+        $form = $this->createForm(new FlowerType(), $flower);
+
+
+    	return $this->render('AranexFreitagBundle:Default:flower.html.twig', array(
+    			'form' => $form->createView()
+    	));
+
+
+
+Upload-Dir in der Konfiguration einsetzten
+
+parameters:
+    solitude:
+        user_uploads_dir: media/
+
+Upload-Dir aus der Konfiguration auslesen:
+
+            $upload_dir = $this->container->parameters['solitude']['user_uploads_dir'];
+            $symfony_root = dirname( $this->get('kernel')->getRootDir() ) . '/';
+            $upload_dir_abs = $symfony_root . $upload_dir;
+
+Daten aus dem Upload auslesen und verwertern
+
+            $file = $form['attachment']->getData();
+
+            if (!empty( $file )){
+                // echo $file->getClientOriginalName()  . "<br />\n";
+                $extension = $file->guessExtension();
+                $file->move($upload_dir_abs, rand(1, 99999).'.'.$extension);
+            }
+
+
+Beispiel FlowerCollection anhand von BlumenUndBlaettern Testen
+
+php app/console doctrine:generate:entity --no-interaction --entity="AranexFreitagBundle:Petal" --fields="name:string(255)" --with-repository
+
+Die Attachments an die Blätter (Petals) hängen 
+
+Die Entities aktualliesieren
+
+php app/console doctrine:generate:entities AranexFreitagBundle
+
+Datenbank anpassen
+
+php app/console doctrine:schema:update --force
+
+Form anlegen
+php app/console generate:doctrine:form AranexFreitagBundle:Petal
+
+verschieben
+
+
+Neue Route anlegen
+
+aranex_freitag_collection:
+    path:      /freitag/collection
+    defaults:  { _controller: AranexFreitagBundle:Default:collection }
+
+
+FlowerType erweitern
+
+
+
+
+http://stackoverflow.com/questions/14175463/uploading-images-using-form-collections-and-doctrine-in-symfony2
+http://symfony2.ylly.fr/upload-file-with-doctrine-in-symfony2-jordscream/

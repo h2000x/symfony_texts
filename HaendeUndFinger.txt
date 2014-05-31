@@ -1,0 +1,226 @@
+Münder und Zähne
+
+Hände und Finger
+
+Hands and Fingers
+
+Apache und Mysql starten
+Konsole öffnen und aus das Symfony2-Rootverzeichnis gehen
+
+php app/console generate:bundle --namespace=Acme/HandBundle --format=yml
+Name des Bundle: AcmeHandBundle
+Immer die Default-Einstellungen bestätigen
+
+
+Dateien wurden erstellt unter:
+#\src\Acme\HandBundle
+
+Routing
+#src\Acme\HandBundle\Resources\config\routing.yml
+
+acme_hand_create:
+    pattern:  /hand/create/{name}
+    defaults: { _controller: AcmeHandBundle:Default:createHand }
+
+	
+#\src\Acme\HandBundle\Controller\DefaultController.php	
+
+use Symfony\Component\HttpFoundation\Response;
+
+class DefaultController extends Controller
+{
+[...]
+
+    public function createHandAction($name){
+
+    	//Zum Testen
+    	return new Response("ping $name " . time());
+
+    }
+}
+
+Aufrufen zum Testen des Routing 
+
+http://symfony.localhost/app_dev.php/hand/create/linkeHand
+
+Der im Nächsten Schritt erstelle ich die beiden Tabellen die miteinander 
+eine 1:n-Verbindung eingehen sollen und zwar Hand und Finger. Jede
+Hand soll mehrere Finger haben können.
+
+Objekt Hand
+-id: integer
+-name: string
+-description: string //Zusatzinfomationen ob die Hand sauber ist oder ähnliches
+
+Objekt Finger
+-id: integer
+-name: string
+-hand: relation
+
+
+php app/console doctrine:generate:entity --no-interaction --entity="AcmeHandBundle:Hand" --fields="name:string(255) description:text" --with-repository 
+php app/console doctrine:generate:entity --no-interaction --entity="AcmeHandBundle:Finger" --fields="name:string(255)" --with-repository 
+
+
+Jetzt wird die Relation zwischen Finger und Hand eingebaut
+In die Hand.php kommt die OneToMany-Relation rein weil eine Hand hat mehere Finger:
+
+#\src\Acme\HandBundle\Entity\Hand.php
+use Doctrine\Common\Collections\ArrayCollection;
+
+    /**
+     * @ORM\OneToMany(targetEntity="Finger", mappedBy="hand")
+     */
+    protected $fingers;
+
+    public function __construct(){
+        $this->fingers = new ArrayCollection();
+    }
+
+	
+
+Und jetzt das Pendant für die Finger, verscherschiedenen Finger gehören zu 
+einer Hand, in der Tabelle 'finger' wird das Feld hand_id hinzugefügt, 
+welches verknüpft ist mit 'id'-Feld der Tabelle 'hand'.
+
+#\src\Acme\HandBundle\Entity\Finger.php
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Hand", inversedBy="fingers")
+     * @ORM\JoinColumn(name="hand_id", referencedColumnName="id")
+     */
+    protected $hand;
+
+
+Schreibweisen der verschieden Elemente der OneToMany-Verbindung
+Auf der Seite des One-Objektes, wird das Ziel Objekt ('targetEntity') mit 
+großem Anfangsbuchstaben im Singular geschrieben und verknüpft ('mappedBy') 
+mit dem One-Objekt, mit kleinem Anfangsbuchstabe und im Singular.
+So wird eine Objekt-Variable angegeben die klein geschrieben wird, im 
+Plural, benannt nach dem Ziel-Objekt.
+Diese Variable wird in der Construct-Funktion des Objektes als 
+'ArrayCollection' initialisiert.
+
+Auf der Seite des Many-Objektes wird als Target-Entity, das One-Objekt genannt
+Großgeschrieben im Singular und referenziert ('inversedBy') mit dem Many-Objekt
+im Plural und klein geschrieben. 
+Als zweite Zeile der Anotation wird das Feld in der Many-Tabelle genannt, und
+mit welchem Feld in der One-Tabelle es verknüpft ist. Diese Felder werden 
+erzeugt wenn auch die anderen Mysql-Tabellen und Felder erzeugt werden. Siehe
+unten...
+Hierdurch wird Variable die auf das One-Objekt im Many-Objekt verweist definiert
+mit dem Namen  des One-Objektes im Singular und kleingeschrieben.
+
+
+	
+Die Klassen anlegen für die neu hinzugefügt Eigenschaften:
+php app/console doctrine:generate:entities Acme/HandBundle	
+
+Wir ändern noch die Beschreibung so das sie leer sein kann.
+aus:
+#\src\Acme\HandBundle\Entity\Hand.php
+* @ORM\Column(name="description", type="text")
+wird
+* @ORM\Column(name="description", type="text", nullable=true)
+
+
+
+
+Mysql-Tabellen erzeugen
+php app/console doctrine:schema:update --force
+
+Bei der hand_id in der Tabelle finger, handelt es sich um einen foreign key
+der über einen Contrain in eingebunden wurde. Wenn man die Strukur, über 
+phpMyAdmin als Text exportiert, sieht man u.a. folgendes:
+
+
+--
+-- Constraints der Tabelle `finger`
+--
+ALTER TABLE `finger`
+  ADD CONSTRAINT `FK_CC018F89EDDBB459` FOREIGN KEY (`hand_id`) REFERENCES `hand` (`id`);
+
+
+Eine Hand erstellen:
+
+#\src\Acme\HandBundle\Controller\DefaultController.php	
+[...]
+use Acme\HandBundle\Entity\Hand;
+use Acme\HandBundle\Entity\Finger;
+
+[...]
+    public function createHandAction($name){
+
+	    $hand = new Hand();
+	    $hand->setName( $name );
+
+	    $finger1 = new Finger();
+	    $finger1->setName( 'Hand'. ucfirst($name) . 'Finger1');
+	    $finger1->setHand( $hand );
+
+	    $finger2 = new Finger();
+	    $finger2->setName( 'Hand'. ucfirst($name) . 'Finger2');
+	    $finger2->setHand( $hand );
+	    
+
+	    //EntityManager
+	    $em = $this->getDoctrine()->getManager();
+	    $em->persist( $finger1 );
+	    $em->persist( $finger2 );
+	    $em->persist( $hand );
+
+	    $em->flush();
+
+    	return new Response("ping $name " . time());
+
+    }
+	
+Wenn wir jetzt:
+http://symfony.localhost/app_dev.php/hand/create/linkeHand
+
+aufrufen könne wir in der Datenbank in der Finger-Tabelle die entsprechenden
+Einträge sehen.
+
+Die Hand aufrufen:	
+
+eine neue Route hinzufügen:
+#src\Acme\HandBundle\Resources\config\routing.yml
+
+acme_hand_show:
+    pattern:  /hand/show/{id}
+    defaults: { _controller: AcmeHandBundle:Default:showHand }
+
+#\src\Acme\HandBundle\Controller\DefaultController.php	
+[...]
+    public function showHandAction($id){
+    	$hand = $this->getDoctrine()->getRepository('AcmeHandBundle:Hand')
+    		->find($id);
+
+    	if ( $hand ){
+	    	$fingers = $hand->getFingers();
+	    	if ($fingers){
+		    	foreach ($fingers as $index => $finger) {
+		    		echo $index . ': ' . $finger->getName() ."<br />\n";
+		    	}
+	    	}
+    	}
+    	return new Response("ping $id " . time());	
+    }
+	
+Aufrufen mit:
+
+http://symfony.localhost/app_dev.php/hand/show/1	
+
+Ergebnis:
+0: HandLinkeHandFinger1
+1: HandLinkeHandFinger2
+ping 1 1388759868
+
+
+---Ein Bundle aus Symfony2 löschen---
+http://symfony.com/doc/current/cookbook/bundles/remove.html
+1. Entsprechnende Zeile aus dem app/AppKernel.php löschen
+2. Entsprechnende Zeile aus dem app/config/routing.yml löschen
+3. Das entsprechende Verzeichnis in src löschen.
+4. Die entsprechenden Tabellen löschen
+5. Cache löschen 'php app/console cache:clear'
