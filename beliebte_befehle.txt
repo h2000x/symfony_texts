@@ -27,6 +27,8 @@ Composer self-update
 php composer.phar self-update
 
 
+Achtung im Symfony3 Syntax heißt es bin/console
+
 
 ---Ein Bundle aus Symfony2 löschen---
 http://symfony.com/doc/current/cookbook/bundles/remove.html
