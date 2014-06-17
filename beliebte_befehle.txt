@@ -19,12 +19,12 @@ php app/console cache:clear
 
 
 
+Data Fixture laden, alte Datenbank löschen
+php app/console doctrine:fixtures:load
 
 
-
-
-
-
+Composer self-update
+php composer.phar self-update
 
 
 
